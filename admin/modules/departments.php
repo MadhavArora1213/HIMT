@@ -1,4 +1,29 @@
 <?php
+require_once '../includes/config.php';
+
+// Handle Deactivation
+if (isset($_GET['toggle_status'])) {
+    $id = $_GET['toggle_status'];
+    $status = $_GET['status'];
+    $new_status = ($status == 1) ? 0 : 1;
+    $pdo->prepare("UPDATE departments SET is_active = ? WHERE id = ?")->execute([$new_status, $id]);
+    header("Location: departments.php?success=Status updated successfully");
+    exit();
+}
+
+// Handle Deletion
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    
+    try {
+        $pdo->prepare("DELETE FROM departments WHERE id = ?")->execute([$id]);
+        header("Location: departments.php?success=Department deleted successfully");
+    } catch (Exception $e) {
+        header("Location: departments.php?error=" . urlencode(db_error_message($e)));
+    }
+    exit();
+}
+
 $page_title = 'Department Management';
 include '../includes/header.php';
 
@@ -16,16 +41,6 @@ $sql = "SELECT d.*,
         LEFT JOIN users f_user ON f.user_id = f_user.id
         ORDER BY d.sort_order ASC";
 $departments = $pdo->query($sql)->fetchAll();
-
-// Handle Deactivation
-if (isset($_GET['toggle_status'])) {
-    $id = $_GET['toggle_status'];
-    $status = $_GET['status'];
-    $new_status = ($status == 1) ? 0 : 1;
-    $pdo->prepare("UPDATE departments SET is_active = ? WHERE id = ?")->execute([$new_status, $id]);
-    header("Location: departments.php?success=Status updated successfully");
-    exit();
-}
 ?>
 
 <div style="padding: 2rem;">
@@ -40,8 +55,14 @@ if (isset($_GET['toggle_status'])) {
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
             <?php echo $success; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div id="error-alert" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <?php echo $error; ?>
         </div>
     <?php endif; ?>
 
@@ -125,7 +146,7 @@ if (isset($_GET['toggle_status'])) {
                         <td>
                             <div style="display: flex; gap: 10px;">
                                 <a href="department_edit.php?id=<?php echo $dept['id']; ?>" class="btn-icon" title="Edit"><i data-lucide="edit-3" size="18"></i></a>
-                                <a href="#" class="btn-icon text-danger" title="Delete"><i data-lucide="trash-2" size="18"></i></a>
+                                <a href="departments.php?delete=<?php echo $dept['id']; ?>" class="btn-icon text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this department?');"><i data-lucide="trash-2" size="18"></i></a>
                             </div>
                         </td>
                     </tr>
@@ -138,6 +159,28 @@ if (isset($_GET['toggle_status'])) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            const errorAlert = document.getElementById('error-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            if (errorAlert) {
+                errorAlert.style.transition = 'opacity 0.5s';
+                errorAlert.style.opacity = '0';
+                setTimeout(() => errorAlert.remove(), 500);
+            }
+            
+            // Remove query parameters from URL without refreshing
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            url.searchParams.delete('error');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+
         const el = document.getElementById('sortable-departments');
         Sortable.create(el, {
             animation: 150,

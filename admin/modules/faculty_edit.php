@@ -1,6 +1,5 @@
 <?php
-$page_title = 'Edit Faculty';
-include '../includes/header.php';
+require_once '../includes/config.php';
 
 $id = $_GET['id'] ?? null;
 $faculty = null;
@@ -86,10 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: faculty.php?success=Faculty record saved successfully");
         exit();
     } catch (Exception $e) {
-        $pdo->rollBack();
-        $error = "Error: " . $e->getMessage();
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $error = db_error_message($e);
     }
 }
+
+$page_title = 'Edit Faculty';
+include '../includes/header.php';
 ?>
 
 <div style="padding: 2rem;">

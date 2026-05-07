@@ -1,13 +1,12 @@
 <?php
-$page_title = 'Edit Course';
-include '../includes/header.php';
+require_once '../includes/config.php';
 
 $id = $_GET['id'] ?? null;
 $course = null;
 
 if ($id) {
     $stmt = $pdo->prepare("SELECT * FROM courses WHERE id = ?");
-    $stmt->execute([id]);
+    $stmt->execute([$id]);
     $course = $stmt->fetch();
 }
 
@@ -26,9 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $annual_fee = $_POST['annual_fee'];
     $eligibility = $_POST['eligibility'];
     $affiliation = $_POST['affiliation'];
-    $description = $_POST['description'];
+    $description = $_POST['description'] ?? '';
     $career_prospects = $_POST['career_prospects'];
-    $specializations = json_encode(array_filter(array_map('trim', explode(',', $_POST['specializations']))));
+    $specializations = json_encode(array_filter(array_map('trim', explode(',', $_POST['specializations'] ?? ''))));
     $sort_order = $_POST['sort_order'];
 
     // Handle File Uploads
@@ -36,16 +35,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $brochure_path = $course['brochure_pdf'] ?? '';
 
     if (isset($_FILES['syllabus_pdf']) && $_FILES['syllabus_pdf']['error'] === 0) {
-        $target = '../assets/docs/syllabus_' . time() . '.pdf';
+        $ext = pathinfo($_FILES['syllabus_pdf']['name'], PATHINFO_EXTENSION);
+        $new_name = 'syllabus_' . time() . '.' . $ext;
+        $target = __DIR__ . '/../assets/docs/' . $new_name;
         if (move_uploaded_file($_FILES['syllabus_pdf']['tmp_name'], $target)) {
-            $syllabus_path = 'assets/docs/' . basename($target);
+            $syllabus_path = 'assets/docs/' . $new_name;
         }
     }
 
     if (isset($_FILES['brochure_pdf']) && $_FILES['brochure_pdf']['error'] === 0) {
-        $target = '../assets/docs/brochure_' . time() . '.pdf';
+        $ext = pathinfo($_FILES['brochure_pdf']['name'], PATHINFO_EXTENSION);
+        $new_name = 'brochure_' . time() . '.' . $ext;
+        $target = __DIR__ . '/../assets/docs/' . $new_name;
         if (move_uploaded_file($_FILES['brochure_pdf']['tmp_name'], $target)) {
-            $brochure_path = 'assets/docs/' . basename($target);
+            $brochure_path = 'assets/docs/' . $new_name;
         }
     }
 
@@ -78,10 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header("Location: courses.php?success=Course saved successfully");
         exit();
-    } catch (PDOException $e) {
-        $error = "Error: " . $e->getMessage();
+    } catch (Exception $e) {
+        $error = db_error_message($e);
     }
 }
+
+$page_title = ($id ? 'Edit' : 'Add') . ' Course';
+include '../includes/header.php';
 ?>
 
 <div style="padding: 2rem;">
@@ -149,12 +155,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="form-group" style="margin-top: 1.5rem;">
+                        <label>Course Description</label>
+                        <textarea name="description" class="form-control" rows="4" placeholder="General description of the course..."><?php echo $course['description'] ?? ''; ?></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.5rem;">
                         <label>Specializations (Comma separated)</label>
                         <?php 
                             $specs = '';
                             if (isset($course['specializations'])) {
                                 $specs_array = json_decode($course['specializations'], true);
-                                $specs = implode(', ', $specs_array);
+                                if (is_array($specs_array)) {
+                                    $specs = implode(', ', $specs_array);
+                                }
                             }
                         ?>
                         <input type="text" name="specializations" class="form-control" value="<?php echo $specs; ?>" placeholder="e.g. AI & ML, Cloud Computing, Cyber Security">
@@ -182,16 +195,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label>Syllabus PDF</label>
                         <input type="file" name="syllabus_pdf" class="form-control" accept=".pdf">
-                        <?php if (isset($course['syllabus_pdf'])): ?>
-                            <a href="../<?php echo $course['syllabus_pdf']; ?>" target="_blank" style="font-size: 0.75rem; color: var(--accent); display: block; margin-top: 5px;">View Current Syllabus</a>
+                        <?php if (!empty($course['syllabus_pdf'])): ?>
+                            <a href="<?php echo ASSETS_URL . 'docs/' . basename($course['syllabus_pdf']); ?>" target="_blank" style="font-size: 0.75rem; color: var(--accent); display: block; margin-top: 5px;">View Current Syllabus</a>
                         <?php endif; ?>
                     </div>
 
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label>Course Brochure PDF</label>
                         <input type="file" name="brochure_pdf" class="form-control" accept=".pdf">
-                        <?php if (isset($course['brochure_pdf'])): ?>
-                            <a href="../<?php echo $course['brochure_pdf']; ?>" target="_blank" style="font-size: 0.75rem; color: var(--accent); display: block; margin-top: 5px;">View Current Brochure</a>
+                        <?php if (!empty($course['brochure_pdf'])): ?>
+                            <a href="<?php echo ASSETS_URL . 'docs/' . basename($course['brochure_pdf']); ?>" target="_blank" style="font-size: 0.75rem; color: var(--accent); display: block; margin-top: 5px;">View Current Brochure</a>
                         <?php endif; ?>
                     </div>
 

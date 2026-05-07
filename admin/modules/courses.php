@@ -1,4 +1,28 @@
 <?php
+require_once '../includes/config.php';
+
+// Handle Status Toggle
+if (isset($_GET['toggle_status'])) {
+    $id = $_GET['toggle_status'];
+    $status = $_GET['status'];
+    $new_status = ($status == 1) ? 0 : 1;
+    $pdo->prepare("UPDATE courses SET is_active = ? WHERE id = ?")->execute([$new_status, $id]);
+    header("Location: courses.php?success=Status updated successfully");
+    exit();
+}
+
+// Handle Deletion
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    try {
+        $pdo->prepare("DELETE FROM courses WHERE id = ?")->execute([$id]);
+        header("Location: courses.php?success=Course deleted successfully");
+    } catch (PDOException $e) {
+        header("Location: courses.php?error=Error deleting course: " . $e->getMessage());
+    }
+    exit();
+}
+
 $page_title = 'Course Management';
 include '../includes/header.php';
 
@@ -13,16 +37,6 @@ $sql = "SELECT c.*, d.name as dept_name,
         JOIN departments d ON c.department_id = d.id
         ORDER BY d.name ASC, c.sort_order ASC";
 $courses = $pdo->query($sql)->fetchAll();
-
-// Handle Status Toggle
-if (isset($_GET['toggle_status'])) {
-    $id = $_GET['toggle_status'];
-    $status = $_GET['status'];
-    $new_status = ($status == 1) ? 0 : 1;
-    $pdo->prepare("UPDATE courses SET is_active = ? WHERE id = ?")->execute([$new_status, $id]);
-    header("Location: courses.php?success=Status updated successfully");
-    exit();
-}
 ?>
 
 <div style="padding: 2rem;">
@@ -37,8 +51,14 @@ if (isset($_GET['toggle_status'])) {
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
             <?php echo $success; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div id="error-alert" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <?php echo $error; ?>
         </div>
     <?php endif; ?>
 
@@ -105,7 +125,7 @@ if (isset($_GET['toggle_status'])) {
                         <td>
                             <div style="display: flex; gap: 10px;">
                                 <a href="course_edit.php?id=<?php echo $course['id']; ?>" class="btn-icon" title="Edit"><i data-lucide="edit-3" size="18"></i></a>
-                                <a href="#" class="btn-icon text-danger" title="Delete"><i data-lucide="trash-2" size="18"></i></a>
+                                <a href="courses.php?delete=<?php echo $course['id']; ?>" class="btn-icon text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this course? This will also delete all associated subjects, attendance, and student links.');"><i data-lucide="trash-2" size="18"></i></a>
                             </div>
                         </td>
                     </tr>
@@ -115,6 +135,32 @@ if (isset($_GET['toggle_status'])) {
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            const errorAlert = document.getElementById('error-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            if (errorAlert) {
+                errorAlert.style.transition = 'opacity 0.5s';
+                errorAlert.style.opacity = '0';
+                setTimeout(() => errorAlert.remove(), 500);
+            }
+            
+            // Remove query parameters from URL without refreshing
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            url.searchParams.delete('error');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>
 
 <style>
     .btn-icon {
