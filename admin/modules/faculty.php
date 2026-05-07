@@ -1,4 +1,43 @@
 <?php
+require_once '../includes/config.php';
+
+// Handle Deletion
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    try {
+        $pdo->beginTransaction();
+        
+        // Get user_id first
+        $stmt = $pdo->prepare("SELECT user_id FROM faculty WHERE id = ?");
+        $stmt->execute([$id]);
+        $faculty = $stmt->fetch();
+        
+        if ($faculty) {
+            // Delete faculty record
+            $pdo->prepare("DELETE FROM faculty WHERE id = ?")->execute([$id]);
+            // Delete user record
+            $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$faculty['user_id']]);
+        }
+        
+        $pdo->commit();
+        header("Location: faculty.php?success=Faculty record deleted successfully");
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        header("Location: faculty.php?error=" . urlencode(db_error_message($e)));
+    }
+    exit();
+}
+
+// Handle Status Toggle
+if (isset($_GET['toggle_status'])) {
+    $id = $_GET['toggle_status'];
+    $status = $_GET['status'];
+    $new_status = ($status == 1) ? 0 : 1;
+    $pdo->prepare("UPDATE faculty SET is_active = ? WHERE id = ?")->execute([$new_status, $id]);
+    header("Location: faculty.php?success=Faculty status updated");
+    exit();
+}
+
 $page_title = 'Faculty Management';
 include '../includes/header.php';
 
@@ -13,16 +52,6 @@ $sql = "SELECT f.*, u.name, u.email, d.name as dept_name
         JOIN departments d ON f.department_id = d.id
         ORDER BY d.name ASC, u.name ASC";
 $faculty_list = $pdo->query($sql)->fetchAll();
-
-// Handle Status Toggle
-if (isset($_GET['toggle_status'])) {
-    $id = $_GET['toggle_status'];
-    $status = $_GET['status'];
-    $new_status = ($status == 1) ? 0 : 1;
-    $pdo->prepare("UPDATE faculty SET is_active = ? WHERE id = ?")->execute([$new_status, $id]);
-    header("Location: faculty.php?success=Faculty status updated");
-    exit();
-}
 ?>
 
 <div style="padding: 2rem;">
@@ -37,8 +66,14 @@ if (isset($_GET['toggle_status'])) {
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2); transition: opacity 0.5s;">
             <?php echo $success; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div id="error-alert" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(239, 68, 68, 0.2); transition: opacity 0.5s;">
+            <?php echo $error; ?>
         </div>
     <?php endif; ?>
 
@@ -99,7 +134,9 @@ if (isset($_GET['toggle_status'])) {
                         <td>
                             <div style="display: flex; gap: 10px;">
                                 <a href="faculty_edit.php?id=<?php echo $f['id']; ?>" class="btn-icon" title="Edit"><i data-lucide="edit-3" size="18"></i></a>
-                                <a href="#" class="btn-icon text-danger" title="Delete"><i data-lucide="trash-2" size="18"></i></a>
+                                <a href="faculty.php?delete=<?php echo $f['id']; ?>" class="btn-icon text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this faculty member? This will also delete their login account.');">
+                                    <i data-lucide="trash-2" size="18"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -109,6 +146,30 @@ if (isset($_GET['toggle_status'])) {
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            const errorAlert = document.getElementById('error-alert');
+            if (successAlert) {
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            if (errorAlert) {
+                errorAlert.style.opacity = '0';
+                setTimeout(() => errorAlert.remove(), 500);
+            }
+            
+            // Clean URL parameters
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            url.searchParams.delete('error');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>
 
 <style>
     .btn-icon {
