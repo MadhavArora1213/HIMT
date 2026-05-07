@@ -1,6 +1,5 @@
 <?php
-$page_title = 'Enroll Student';
-include '../includes/header.php';
+require_once '../includes/config.php';
 
 $id = $_GET['id'] ?? null;
 $student = null;
@@ -84,10 +83,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: students.php?success=Student record saved successfully");
         exit();
     } catch (Exception $e) {
-        $pdo->rollBack();
-        $error = "Error: " . $e->getMessage();
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $error = db_error_message($e);
     }
 }
+
+$page_title = 'Enroll Student';
+include '../includes/header.php';
 ?>
 
 <div style="padding: 2rem;">
@@ -169,8 +171,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-group">
                             <label>Current Semester</label>
                             <select name="current_semester" class="form-control">
-                                <?php for($i=1; $i<=8; $i++): ?>
-                                    <option value="<?php echo $i; ?>" <?php echo (isset($student['current_semester']) && $student['current_semester'] == $i) ? 'selected' : ''; ?>><?php echo $i; ?>th Sem</option>
+                                <?php for($i=1; $i<=10; $i++): ?>
+                                    <option value="<?php echo $i; ?>" <?php echo (isset($student['current_semester']) && $student['current_semester'] == $i) ? 'selected' : ''; ?>><?php echo $i; ?><?php 
+                                        if($i==1) echo 'st'; 
+                                        elseif($i==2) echo 'nd'; 
+                                        elseif($i==3) echo 'rd'; 
+                                        else echo 'th'; 
+                                    ?> Sem</option>
                                 <?php endfor; ?>
                             </select>
                         </div>
@@ -249,6 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <option value="2" <?php echo (isset($student['current_year']) && $student['current_year'] == 2) ? 'selected' : ''; ?>>2nd Year</option>
                             <option value="3" <?php echo (isset($student['current_year']) && $student['current_year'] == 3) ? 'selected' : ''; ?>>3rd Year</option>
                             <option value="4" <?php echo (isset($student['current_year']) && $student['current_year'] == 4) ? 'selected' : ''; ?>>4th Year</option>
+                            <option value="5" <?php echo (isset($student['current_year']) && $student['current_year'] == 5) ? 'selected' : ''; ?>>5th Year</option>
                         </select>
                     </div>
 

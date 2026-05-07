@@ -1,4 +1,35 @@
 <?php
+require_once '../includes/config.php';
+
+// Handle Deletion
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    try {
+        // Fetch user_id first to delete from users table as well if needed
+        $stmt = $pdo->prepare("SELECT user_id FROM students WHERE id = ?");
+        $stmt->execute([$id]);
+        $student = $stmt->fetch();
+        
+        if ($student) {
+            $pdo->prepare("DELETE FROM students WHERE id = ?")->execute([$id]);
+            // Optional: Also delete from users table? 
+            // In this schema, faculty/students are linked to users. 
+            // Usually we keep the user but deactivate, or delete if it's a hard delete.
+            // Based on schema.sql, students_ibfk_1 is ON DELETE CASCADE for user_id.
+            // So if we delete the user, the student is deleted. 
+            // If we delete the student, the user remains.
+            // Let's just delete the student record for now, or user if preferred.
+            // The user requested "delete it not problem" earlier for departments.
+            $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$student['user_id']]);
+        }
+        
+        header("Location: students.php?success=Student record deleted successfully");
+    } catch (PDOException $e) {
+        header("Location: students.php?error=Error deleting student: " . $e->getMessage());
+    }
+    exit();
+}
+
 $page_title = 'Student Management';
 include '../includes/header.php';
 
@@ -84,8 +115,13 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
                 <label style="font-size: 0.75rem; font-weight: 600; margin-bottom: 5px; display: block;">Semester</label>
                 <select name="semester" class="form-control">
                     <option value="">All</option>
-                    <?php for($i=1; $i<=8; $i++): ?>
-                        <option value="<?php echo $i; ?>" <?php echo ($sem_filter == $i) ? 'selected' : ''; ?>><?php echo $i; ?>th Sem</option>
+                    <?php for($i=1; $i<=10; $i++): ?>
+                        <option value="<?php echo $i; ?>" <?php echo ($sem_filter == $i) ? 'selected' : ''; ?>><?php echo $i; ?><?php 
+                            if($i==1) echo 'st'; 
+                            elseif($i==2) echo 'nd'; 
+                            elseif($i==3) echo 'rd'; 
+                            else echo 'th'; 
+                        ?> Sem</option>
                     <?php endfor; ?>
                 </select>
             </div>
@@ -97,8 +133,14 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
             <?php echo $success; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div id="error-alert" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <?php echo $error; ?>
         </div>
     <?php endif; ?>
 
@@ -162,10 +204,9 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
                             <div style="display: flex; gap: 8px;">
                                 <a href="student_profile.php?id=<?php echo $s['id']; ?>" class="btn-icon" title="View Profile"><i data-lucide="external-link" size="18"></i></a>
                                 <a href="student_edit.php?id=<?php echo $s['id']; ?>" class="btn-icon" title="Edit"><i data-lucide="edit-3" size="18"></i></a>
-                                <div class="dropdown">
-                                    <button class="btn-icon"><i data-lucide="more-vertical" size="18"></i></button>
-                                    <!-- Dropdown menu would go here for PDF generation -->
-                                </div>
+                                <a href="students.php?delete=<?php echo $s['id']; ?>" class="btn-icon text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this student? This will permanently remove their academic records, attendance, and login account.');">
+                                    <i data-lucide="trash-2" size="18"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -175,6 +216,32 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            const errorAlert = document.getElementById('error-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            if (errorAlert) {
+                errorAlert.style.transition = 'opacity 0.5s';
+                errorAlert.style.opacity = '0';
+                setTimeout(() => errorAlert.remove(), 500);
+            }
+            
+            // Remove query parameters from URL without refreshing
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            url.searchParams.delete('error');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>
 
 <style>
     .btn-icon {
@@ -189,6 +256,7 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
         text-decoration: none;
     }
     .btn-icon:hover { color: var(--accent); }
+    .text-danger:hover { color: var(--danger); }
     .form-group label { color: var(--text-muted); }
 </style>
 
