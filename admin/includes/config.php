@@ -135,4 +135,29 @@ function validate_api_token($pdo) {
     echo json_encode(['error' => 'Unauthorized Access']);
     exit();
 }
+/**
+ * Utility to format database errors for users
+ */
+function db_error_message($e) {
+    $code = $e->getCode();
+    $message = $e->getMessage();
+    
+    // Integrity constraint violation (Duplicate entry, Foreign Key)
+    if ($code == '23000') {
+        if (strpos($message, 'Duplicate entry') !== false) {
+            if (strpos($message, 'email') !== false) return "This email address is already in use by another account.";
+            if (strpos($message, 'enrollment_no') !== false) return "This Enrollment Number is already registered.";
+            if (strpos($message, 'roll_number') !== false) return "This Roll Number is already assigned to another student.";
+            if (strpos($message, 'employee_code') !== false) return "This Employee Code is already in use.";
+            if (strpos($message, 'for key \'name\'') !== false) return "A record with this name already exists.";
+            return "A duplicate record already exists in the system.";
+        }
+        if (strpos($message, 'foreign key constraint fails') !== false) {
+            return "Cannot complete action: This record is currently linked to other data in the system.";
+        }
+    }
+    
+    // Connection lost or other errors
+    return "Database Error: " . $message;
+}
 ?>
