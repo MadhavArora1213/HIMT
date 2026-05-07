@@ -1,0 +1,6 @@
+Name,Email,Enrollment,Roll,DeptID,CourseID,AdmissionYear,CurrentSem,CurrentYear,DOB(YYYY-MM-DD),Gender,Category,Aadhar,Address,ParentName,ParentPhone,AdmissionType
+Rahul Sharma,rahul.sharma@example.com,ENR2026001,101,2,2,2026,1,1,2005-04-15,Male,General,123456789012,"12-B, Model Town, Delhi",Suresh Sharma,9876543210,Regular
+Sneha Gupta,sneha.gupta@example.com,ENR2026002,102,2,2,2026,1,1,2006-01-20,Female,OBC,234567890123,"Flat 402, Green Heights, Delhi",Alok Gupta,9876543211,Regular
+Amit Verma,amit.verma@example.com,ENR2026003,103,2,2,2026,1,1,2005-09-10,Male,General,345678901234,"Sector 15, Rohini, Delhi",Vijay Verma,9876543212,Regular
+Priya Singh,priya.singh@example.com,ENR2026004,104,2,2,2026,1,1,2005-12-05,Female,SC,456789012345,"House No. 88, Punjabi Bagh, Delhi",Manoj Singh,9876543213,Regular
+Vikram Rao,vikram.rao@example.com,ENR2026005,105,2,2,2026,1,1,2004-05-30,Male,ST,567890123456,"Street 5, Vasant Kunj, Delhi",Ram Rao,9876543214,Regular
