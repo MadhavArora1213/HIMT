@@ -1,5 +1,5 @@
 <?php
 require_once 'includes/config.php';
-$stmt = $pdo->query("SELECT id, name FROM courses");
-echo json_encode($stmt->fetchAll());
+$stmt = $pdo->query("SHOW CREATE TABLE faculty");
+echo $stmt->fetch()['Create Table'];
 ?>
