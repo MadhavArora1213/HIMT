@@ -10,6 +10,46 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 header("Permissions-Policy: geolocation=(), camera=(), microphone=()");
 
 check_login();
+
+// Module Permission Enforcement
+$module_mapping = [
+    'admissions.php' => 'admissions',
+    'departments.php' => 'departments',
+    'courses.php' => 'courses',
+    'subjects.php' => 'subjects',
+    'students.php' => 'students',
+    'faculty.php' => 'faculty',
+    'attendance_mark.php' => 'attendance',
+    'fees.php' => 'fees',
+    'exams.php' => 'exams',
+    'library.php' => 'library',
+    'placements.php' => 'placements',
+    'study_materials.php' => 'study_material',
+    'notices.php' => 'notices',
+    'events.php' => 'events',
+    'gallery.php' => 'gallery',
+    'inquiries.php' => 'inquiries',
+    'institute.php' => 'institute',
+    'users.php' => 'users',
+    'settings.php' => 'settings'
+];
+
+$current_filename = basename($_SERVER['PHP_SELF']);
+if (isset($module_mapping[$current_filename])) {
+    if (!has_permission($module_mapping[$current_filename])) {
+        echo "<div style='padding: 5rem; text-align: center; background: white; height: 100vh;'>
+                <div style='max-width: 400px; margin: 0 auto; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid var(--border);'>
+                    <div style='width: 64px; height: 64px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;'>
+                        <svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'/><path d='M12 9v4'/><path d='M12 17h.01'/></svg>
+                    </div>
+                    <h2 style='font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;'>Access Denied</h2>
+                    <p style='color: var(--text-muted); margin-bottom: 2rem;'>You don't have the necessary permissions to access this administrative module.</p>
+                    <a href='index.php' style='display: block; padding: 0.75rem; background: var(--accent); color: white; text-decoration: none; border-radius: 10px; font-weight: 600;'>Return to Dashboard</a>
+                </div>
+              </div>";
+        exit();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

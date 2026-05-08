@@ -1,12 +1,21 @@
 <?php
+require_once '../includes/config.php';
+
+// Handle Delete
+if (isset($_GET['delete_id'])) {
+    $pdo->prepare("DELETE FROM events WHERE id = ?")->execute([$_GET['delete_id']]);
+    header("Location: events.php?success=Event removed successfully");
+    exit();
+}
+
+// Fetch events
+$events = $pdo->query("SELECT * FROM events ORDER BY event_date DESC")->fetchAll();
+
 $page_title = 'Events & News Management';
 include '../includes/header.php';
 
 $success = $_GET['success'] ?? '';
 $error = $_GET['error'] ?? '';
-
-// Fetch events
-$events = $pdo->query("SELECT * FROM events ORDER BY event_date DESC")->fetchAll();
 ?>
 
 <div style="padding: 2rem;">
@@ -21,8 +30,8 @@ $events = $pdo->query("SELECT * FROM events ORDER BY event_date DESC")->fetchAll
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
@@ -69,7 +78,7 @@ $events = $pdo->query("SELECT * FROM events ORDER BY event_date DESC")->fetchAll
                 
                 <div style="display: flex; gap: 10px; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
                     <a href="event_edit.php?id=<?php echo $e['id']; ?>" class="btn" style="flex: 1; background: #f1f5f9; color: var(--text-main); font-size: 0.8125rem; text-decoration: none; text-align: center; padding: 6px;">Edit</a>
-                    <a href="#" class="btn" style="flex: 1; background: var(--danger); color: white; font-size: 0.8125rem; text-decoration: none; text-align: center; padding: 6px;">Delete</a>
+                    <a href="?delete_id=<?php echo $e['id']; ?>" class="btn" style="flex: 1; background: var(--danger); color: white; font-size: 0.8125rem; text-decoration: none; text-align: center; padding: 6px;" onclick="return confirm('Delete this event permanently?')">Delete</a>
                 </div>
             </div>
         </div>
@@ -78,3 +87,21 @@ $events = $pdo->query("SELECT * FROM events ORDER BY event_date DESC")->fetchAll
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>

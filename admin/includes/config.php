@@ -71,22 +71,57 @@ function check_login() {
 }
 
 /**
- * Utility function to check permissions
+ * Define all modules for granular permissions
  */
-function has_permission($required_role) {
+define('MODULE_PERMISSIONS', [
+    'dashboard' => 'Dashboard Access',
+    'admissions' => 'Admissions Management',
+    'departments' => 'Department Management',
+    'courses' => 'Course Management',
+    'subjects' => 'Subject Management',
+    'students' => 'Student Management',
+    'faculty' => 'Faculty Management',
+    'attendance' => 'Attendance Tracking',
+    'fees' => 'Fee Management',
+    'exams' => 'Exams & Results',
+    'library' => 'Library Management',
+    'placements' => 'Placement Management',
+    'study_material' => 'Study Materials',
+    'notices' => 'Notice Board',
+    'events' => 'Campus Events',
+    'gallery' => 'Photo Gallery',
+    'inquiries' => 'Inquiries Management',
+    'institute' => 'Institute Profile',
+    'users' => 'User & Roles Management',
+    'settings' => 'System Settings'
+]);
+
+/**
+ * Utility function to check if user has permission for a specific module
+ */
+function has_permission($permission) {
     if (!isset($_SESSION['role'])) return false;
     
-    $roles = [
-        'student' => 1,
-        'faculty' => 2,
-        'admin' => 3,
-        'super_admin' => 4
-    ];
+    // Super Admin bypass - robust check
+    $current_role = strtolower(trim($_SESSION['role']));
+    if ($current_role === 'super admin' || $current_role === 'super_admin') return true;
     
-    $user_level = $roles[$_SESSION['role']] ?? 0;
-    $required_level = $roles[$required_role] ?? 5;
+    // Check granular permissions
+    if (!isset($_SESSION['permissions'])) {
+        // Fetch permissions if not in session
+        global $pdo;
+        $stmt = $pdo->prepare("SELECT permissions FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $user = $stmt->fetch();
+        $_SESSION['permissions'] = ($user && $user['permissions']) ? json_decode($user['permissions'], true) : [];
+    }
     
-    return $user_level >= $required_level;
+    $user_permissions = $_SESSION['permissions'];
+    if (is_array($user_permissions) && in_array($permission, $user_permissions)) {
+        return true;
+    }
+    
+    return false;
 }
 
 /**
