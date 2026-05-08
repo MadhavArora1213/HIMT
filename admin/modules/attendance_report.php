@@ -43,35 +43,37 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
         </button>
     </div>
 
-    <div class="card" style="margin-bottom: 2rem; padding: 1.5rem;">
-        <form action="attendance_report.php" method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; align-items: end;">
-            <div class="form-group">
-                <label>Department</label>
-                <select name="dept_id" class="form-control" required>
+    <div class="card" style="margin-bottom: 2rem; padding: 1.25rem;">
+        <form action="attendance_report.php" method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) 160px; gap: 1rem; align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">Department</label>
+                <select name="dept_id" class="form-control" required style="font-size: 0.875rem; height: 42px; padding: 0 0.75rem; padding-right: 2rem;">
                     <option value="">Select Dept</option>
                     <?php foreach ($depts as $d): ?>
                         <option value="<?php echo $d['id']; ?>" <?php echo ($dept_id == $d['id']) ? 'selected' : ''; ?>><?php echo $d['name']; ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="form-group">
-                <label>Course</label>
-                <select name="course_id" class="form-control" required>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">Course</label>
+                <select name="course_id" class="form-control" required style="font-size: 0.875rem; height: 42px; padding: 0 0.75rem; padding-right: 2rem;">
                     <option value="">Select Course</option>
                     <?php foreach ($courses as $c): ?>
                         <option value="<?php echo $c['id']; ?>" <?php echo ($course_id == $c['id']) ? 'selected' : ''; ?>><?php echo $c['name']; ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="form-group">
-                <label>From Date</label>
-                <input type="date" name="start_date" class="form-control" value="<?php echo $start_date; ?>">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">From Date</label>
+                <input type="date" name="start_date" class="form-control" value="<?php echo $start_date; ?>" style="font-size: 0.875rem; height: 42px; padding: 0 0.75rem;">
             </div>
-            <div class="form-group">
-                <label>To Date</label>
-                <input type="date" name="end_date" class="form-control" value="<?php echo $end_date; ?>">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">To Date</label>
+                <input type="date" name="end_date" class="form-control" value="<?php echo $end_date; ?>" style="font-size: 0.875rem; height: 42px; padding: 0 0.75rem;">
             </div>
-            <button type="submit" class="btn btn-primary">Generate Report</button>
+            <button type="submit" class="btn btn-primary" style="height: 42px; width: 100%; border-radius: 10px; font-size: 0.875rem;">
+                <i data-lucide="bar-chart-2"></i> Generate Report
+            </button>
         </form>
     </div>
 

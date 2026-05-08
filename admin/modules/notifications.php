@@ -1,9 +1,5 @@
 <?php
-$page_title = 'Notifications Center';
-include '../includes/header.php';
-
-$success = $_GET['success'] ?? '';
-$error = $_GET['error'] ?? '';
+require_once '../includes/config.php';
 
 // Handle Bulk Send
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_bulk'])) {
@@ -24,12 +20,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_bulk'])) {
     }
     
     log_action($pdo, 'Sent Bulk ' . $notify_type, 'Notifications', null, null, ['target' => $target_role, 'count' => count($recipients)]);
-    header("Location: notifications.php?success=" . count($recipients) . " notifications queued successfully.");
+    header("Location: notifications.php?success=" . urlencode(count($recipients) . " notifications queued successfully."));
     exit();
 }
 
 // Fetch History
 $history = $pdo->query("SELECT * FROM notifications ORDER BY created_at DESC LIMIT 10")->fetchAll();
+
+$page_title = 'Notifications Center';
+include '../includes/header.php';
+
+$success = $_GET['success'] ?? '';
+$error = $_GET['error'] ?? '';
 ?>
 
 <div style="padding: 2rem;">
@@ -49,8 +51,8 @@ $history = $pdo->query("SELECT * FROM notifications ORDER BY created_at DESC LIM
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
@@ -138,3 +140,21 @@ $history = $pdo->query("SELECT * FROM notifications ORDER BY created_at DESC LIM
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>

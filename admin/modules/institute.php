@@ -1,6 +1,5 @@
 <?php
-$page_title = 'Institute Management';
-include '../includes/header.php';
+require_once '../includes/config.php';
 
 // Fetch institute details (assuming single institute for now)
 $stmt = $pdo->query("SELECT * FROM institutes LIMIT 1");
@@ -19,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $address = $_POST['address'];
     $city = $_POST['city'];
     $state = $_POST['state'];
-    $pincode = $_POST['pincode'];
-    $website = $_POST['website'];
+    $pincode = $_POST['pincode'] ?? '';
+    $website = $_POST['website'] ?? '';
     $established_year = $_POST['established_year'];
     $about_text = $_POST['about_text'];
     $vision = $_POST['vision'];
@@ -85,12 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Quick Link Handling (Simplified: add new if provided)
+    // Quick Link Handling
     if (!empty($_POST['quick_link_title']) && !empty($_POST['quick_link_url'])) {
         $pdo->prepare("INSERT INTO quick_links (title, link_url) VALUES (?, ?)")->execute([$_POST['quick_link_title'], $_POST['quick_link_url']]);
     }
 
-    // Accreditation Handling (Simplified: add new if provided)
+    // Accreditation Handling
     if (!empty($_POST['accred_name']) && isset($_FILES['accred_logo']) && $_FILES['accred_logo']['error'] === 0) {
         $accred_logo = 'assets/img/uploads/accred_' . time() . '.' . pathinfo($_FILES['accred_logo']['name'], PATHINFO_EXTENSION);
         move_uploaded_file($_FILES['accred_logo']['tmp_name'], '../' . $accred_logo);
@@ -124,8 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $news_ticker_text,
                 $institute['id']
             ]);
-        } else {
-            // INSERT logic omitted for brevity, usually one row exists
         }
         header("Location: institute.php?success=Institute details updated successfully");
         exit();
@@ -173,6 +170,9 @@ if (isset($_GET['delete_accred'])) {
         exit();
     }
 }
+
+$page_title = 'Institute Management';
+include '../includes/header.php';
 ?>
 
 <div style="padding: 2rem;">
@@ -182,8 +182,8 @@ if (isset($_GET['delete_accred'])) {
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
@@ -234,6 +234,14 @@ if (isset($_GET['delete_accred'])) {
                     <div class="form-group">
                         <label>State</label>
                         <input type="text" name="state" class="form-control" value="<?php echo $institute['state'] ?? ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Pincode</label>
+                        <input type="text" name="pincode" class="form-control" value="<?php echo $institute['pincode'] ?? ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Website URL</label>
+                        <input type="text" name="website" class="form-control" value="<?php echo $institute['website'] ?? ''; ?>">
                     </div>
                     <div class="form-group">
                         <label>Established Year</label>
@@ -439,19 +447,19 @@ if (isset($_GET['delete_accred'])) {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     <div class="form-group">
                         <label><i data-lucide="facebook"></i> Facebook URL</label>
-                        <input type="url" name="facebook_url" class="form-control" value="<?php echo $institute['facebook_url'] ?? ''; ?>">
+                        <input type="url" name="facebook_url" class="url-control" value="<?php echo $institute['facebook_url'] ?? ''; ?>">
                     </div>
                     <div class="form-group">
                         <label><i data-lucide="instagram"></i> Instagram URL</label>
-                        <input type="url" name="instagram_url" class="form-control" value="<?php echo $institute['instagram_url'] ?? ''; ?>">
+                        <input type="url" name="instagram_url" class="url-control" value="<?php echo $institute['instagram_url'] ?? ''; ?>">
                     </div>
                     <div class="form-group">
                         <label><i data-lucide="linkedin"></i> LinkedIn URL</label>
-                        <input type="url" name="linkedin_url" class="form-control" value="<?php echo $institute['linkedin_url'] ?? ''; ?>">
+                        <input type="url" name="linkedin_url" class="url-control" value="<?php echo $institute['linkedin_url'] ?? ''; ?>">
                     </div>
                     <div class="form-group">
                         <label><i data-lucide="twitter"></i> Twitter URL</label>
-                        <input type="url" name="twitter_url" class="form-control" value="<?php echo $institute['twitter_url'] ?? ''; ?>">
+                        <input type="url" name="twitter_url" class="url-control" value="<?php echo $institute['twitter_url'] ?? ''; ?>">
                     </div>
                 </div>
             </div>
@@ -491,9 +499,37 @@ if (isset($_GET['delete_accred'])) {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 8px;
-        font-weight: 600;
-        font-size: 0.875rem;
+        margin-bottom: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--text-main);
+    }
+    .form-control, .url-control {
+        height: 52px;
+        padding: 0 1.25rem;
+        font-size: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #fcfdfe;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    .form-control:focus, .url-control:focus {
+        border-color: var(--accent);
+        background: white;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+    textarea.form-control {
+        height: auto;
+        padding: 1.25rem;
+    }
+    .btn-primary {
+        padding: 1rem 3rem;
+        font-size: 1rem;
+        font-weight: 700;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 </style>
 
@@ -509,6 +545,22 @@ if (isset($_GET['delete_accred'])) {
         // Activate target button
         event.currentTarget.classList.add('active');
     }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
 </script>
 
 <?php include '../includes/footer.php'; ?>

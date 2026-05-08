@@ -66,8 +66,8 @@ $categories = $pdo->query("SELECT DISTINCT category FROM library_books")->fetchA
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
@@ -110,9 +110,14 @@ $categories = $pdo->query("SELECT DISTINCT category FROM library_books")->fetchA
                         </td>
                         <td><p style="font-size: 0.8125rem; font-weight: 600;"><?php echo $b['rack_number'] ?: 'TBA'; ?></p></td>
                         <td>
-                            <a href="library_issue.php?book_id=<?php echo $b['id']; ?>" class="btn btn-primary <?php echo $is_low ? 'disabled' : ''; ?>" style="padding: 4px 12px; font-size: 0.75rem; <?php echo $is_low ? 'opacity: 0.5; pointer-events: none;' : ''; ?>">
-                                <i data-lucide="book-up" size="14"></i> Issue
-                            </a>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="library_issue.php?book_id=<?php echo $b['id']; ?>" class="btn btn-primary <?php echo $is_low ? 'disabled' : ''; ?>" style="padding: 4px 12px; font-size: 0.75rem; <?php echo $is_low ? 'opacity: 0.5; pointer-events: none;' : ''; ?>">
+                                    <i data-lucide="book-up" size="14"></i> Issue
+                                </a>
+                                <a href="library_edit.php?id=<?php echo $b['id']; ?>" class="btn-icon" title="Edit Book">
+                                    <i data-lucide="edit-3" size="16"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -123,3 +128,21 @@ $categories = $pdo->query("SELECT DISTINCT category FROM library_books")->fetchA
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>

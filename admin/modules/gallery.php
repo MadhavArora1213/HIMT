@@ -1,138 +1,109 @@
 <?php
+require_once '../includes/config.php';
+
+// Handle Category Delete
+if (isset($_GET['delete_cat_id'])) {
+    $cat_id = $_GET['delete_cat_id'];
+    
+    // Fetch all images to unlink files
+    $stmt = $pdo->prepare("SELECT image_path FROM gallery WHERE category_id = ?");
+    $stmt->execute([$cat_id]);
+    $images = $stmt->fetchAll();
+    foreach($images as $img) {
+        if (file_exists('../assets/img/uploads/' . $img['image_path'])) {
+            unlink('../assets/img/uploads/' . $img['image_path']);
+        }
+    }
+    
+    $pdo->prepare("DELETE FROM gallery_categories WHERE id = ?")->execute([$cat_id]);
+    header("Location: gallery.php?success=Collection removed successfully");
+    exit();
+}
+
+// Fetch Categories with cover image and count
+$categories = $pdo->query("
+    SELECT c.*, 
+    (SELECT image_path FROM gallery WHERE category_id = c.id ORDER BY created_at DESC LIMIT 1) as cover_image,
+    (SELECT COUNT(*) FROM gallery WHERE category_id = c.id) as total_items
+    FROM gallery_categories c 
+    ORDER BY c.id DESC
+")->fetchAll();
+
 $page_title = 'Gallery Management';
 include '../includes/header.php';
 
 $success = $_GET['success'] ?? '';
-$error = $_GET['error'] ?? '';
-
-// Handle Category Addition
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
-    $name = $_POST['category_name'];
-    $pdo->prepare("INSERT INTO gallery_categories (name) VALUES (?)")->execute([$name]);
-    header("Location: gallery.php?success=Category added");
-    exit();
-}
-
-// Handle Image Upload
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_image'])) {
-    $cat_id = $_POST['category_id'];
-    $caption = $_POST['caption'];
-    $is_featured = isset($_POST['is_featured']) ? 1 : 0;
-    
-    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-        $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-        $filename = 'gallery_' . time() . '.' . $ext;
-        $target = '../assets/img/uploads/' . $filename;
-        
-        if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-            $pdo->prepare("INSERT INTO gallery (category_id, image_path, caption, is_featured) VALUES (?, ?, ?, ?)")
-                ->execute([$cat_id, $filename, $caption, $is_featured]);
-            header("Location: gallery.php?success=Image uploaded to gallery");
-            exit();
-        }
-    }
-}
-
-$categories = $pdo->query("SELECT * FROM gallery_categories")->fetchAll();
-$gallery_items = $pdo->query("SELECT g.*, c.name as category_name FROM gallery g JOIN gallery_categories c ON g.category_id = c.id ORDER BY g.created_at DESC")->fetchAll();
 ?>
 
 <div style="padding: 2rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <div>
             <h2 style="font-size: 1.5rem; font-weight: 700;">Media Gallery</h2>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">Manage event photos, campus life, and featured homepage media.</p>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">Manage event collections, campus life albums, and featured media.</p>
         </div>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" onclick="document.getElementById('catModal').style.display='block'" style="background: white; color: var(--text-main); border: 1px solid var(--border);">
-                <i data-lucide="folder-plus"></i> New Category
-            </button>
-            <button class="btn btn-primary" onclick="document.getElementById('uploadModal').style.display='block'">
-                <i data-lucide="image-plus"></i> Upload Photos
-            </button>
+            <a href="gallery_category_edit.php" class="btn btn-primary" style="display: flex; align-items: center; gap: 5px; text-decoration: none;">
+                <i data-lucide="plus-square" size="18"></i> Create New Collection
+            </a>
         </div>
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-        <?php foreach ($gallery_items as $item): ?>
-        <div class="card" style="overflow: hidden; position: relative; border-radius: 15px;">
-            <img src="../assets/img/uploads/<?php echo $item['image_path']; ?>" style="width: 100%; height: 200px; object-fit: cover;">
-            <div style="padding: 1rem;">
-                <span style="font-size: 0.65rem; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);"><?php echo $item['category_name']; ?></span>
-                <p style="font-size: 0.875rem; font-weight: 600; margin-top: 5px; color: var(--text-main);"><?php echo $item['caption'] ?: 'Untitled Image'; ?></p>
-                <?php if($item['is_featured']): ?>
-                    <span style="color: var(--success); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 4px; margin-top: 5px;">
-                        <i data-lucide="star" size="12"></i> Featured
-                    </span>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2rem;">
+        <?php if (empty($categories)): ?>
+            <p style="color: var(--text-muted); grid-column: span 3; text-align: center; padding: 4rem;">No media collections created yet.</p>
+        <?php endif; ?>
+        <?php foreach ($categories as $c): ?>
+        <div class="card" style="overflow: hidden; border-radius: 15px; transition: transform 0.2s;">
+            <div style="position: relative; height: 200px; background: #f8fafc;">
+                <?php if($c['cover_image']): ?>
+                    <img src="../assets/img/uploads/<?php echo $c['cover_image']; ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php else: ?>
+                    <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted);">
+                        <i data-lucide="image" size="48" style="opacity: 0.2;"></i>
+                        <p style="font-size: 0.75rem; margin-top: 10px;">Empty Collection</p>
+                    </div>
                 <?php endif; ?>
+                <div style="position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.6); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;">
+                    <?php echo $c['total_items']; ?> Photos
+                </div>
             </div>
-            <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
-                <a href="#" class="btn-icon" style="background: rgba(255,255,255,0.9); border-radius: 50%; width: 32px; height: 32px;"><i data-lucide="trash-2" size="16" color="#ef4444"></i></a>
+            
+            <div style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);"><?php echo $c['name']; ?></h3>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1.5rem;">Created on <?php echo date('M d, Y', time()); // Simplified ?></p>
+                
+                <div style="display: flex; gap: 10px; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                    <a href="gallery_category_edit.php?id=<?php echo $c['id']; ?>" class="btn" style="flex: 2; background: var(--accent); color: white; font-size: 0.8rem; text-decoration: none; text-align: center; font-weight: 600;">Manage Gallery</a>
+                    <a href="?delete_cat_id=<?php echo $c['id']; ?>" class="btn" style="flex: 1; background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 0.8rem; text-decoration: none; text-align: center;" onclick="return confirm('Delete this entire collection and all its photos?')"><i data-lucide="trash-2" size="16"></i></a>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
     </div>
 </div>
 
-<!-- Modals (Simple implementations) -->
-<div id="catModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; display:flex; align-items:center; justify-content:center;">
-    <div class="card" style="width:400px; padding:2rem;">
-        <h3 style="margin-bottom:1.5rem;">Add Category</h3>
-        <form method="POST">
-            <input type="text" name="category_name" class="form-control" placeholder="e.g. Annual Fest 2026" required>
-            <div style="margin-top:1.5rem; display:flex; gap:10px;">
-                <button type="submit" name="add_category" class="btn btn-primary" style="flex:1;">Save</button>
-                <button type="button" onclick="this.closest('#catModal').style.display='none'" class="btn" style="flex:1; background:#f1f5f9;">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="uploadModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; display:flex; align-items:center; justify-content:center;">
-    <div class="card" style="width:500px; padding:2rem;">
-        <h3 style="margin-bottom:1.5rem;">Upload Photos</h3>
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label>Select Category</label>
-                <select name="category_id" class="form-control" required>
-                    <?php foreach($categories as $c): ?>
-                        <option value="<?php echo $c['id']; ?>"><?php echo $c['name']; ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group" style="margin-top:1rem;">
-                <label>Photo</label>
-                <input type="file" name="image" class="form-control" required>
-            </div>
-            <div class="form-group" style="margin-top:1rem;">
-                <label>Caption</label>
-                <input type="text" name="caption" class="form-control">
-            </div>
-            <div style="margin-top:1rem; display:flex; align-items:center; gap:10px;">
-                <input type="checkbox" name="is_featured" id="feat">
-                <label for="feat" style="margin:0;">Feature on Homepage</label>
-            </div>
-            <div style="margin-top:1.5rem; display:flex; gap:10px;">
-                <button type="submit" name="upload_image" class="btn btn-primary" style="flex:1;">Upload</button>
-                <button type="button" onclick="this.closest('#uploadModal').style.display='none'" class="btn" style="flex:1; background:#f1f5f9;">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
+<?php include '../includes/footer.php'; ?>
 
 <script>
-    // Simple Modal Toggle
-    document.querySelectorAll('[onclick*="display="]').forEach(btn => {
-        const modalId = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
-        const modal = document.getElementById(modalId);
-        if (modal) modal.style.display = 'none'; // Ensure hidden initially
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
     });
 </script>
-
-<?php include '../includes/footer.php'; ?>

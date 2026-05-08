@@ -1,6 +1,5 @@
 <?php
-$page_title = 'Issue Book';
-include '../includes/header.php';
+require_once '../includes/config.php';
 
 $book_id = $_GET['book_id'] ?? '';
 $book = null;
@@ -42,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['issue_book'])) {
         $error = "Issue Failed: " . $e->getMessage();
     }
 }
+
+$page_title = 'Issue Book';
+include '../includes/header.php';
 ?>
 
 <div style="padding: 2rem;">

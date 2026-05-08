@@ -70,24 +70,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
 
     <!-- Selection -->
     <div class="card" style="margin-bottom: 2rem; padding: 1.5rem;">
-        <form action="marks_entry.php" method="GET" style="display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: end;">
+        <form action="marks_entry.php" method="GET">
             <input type="hidden" name="exam_id" value="<?php echo $exam_id; ?>">
-            <div class="form-group">
-                <label>Select Subject</label>
-                <select name="subject_id" class="form-control" required>
+            <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;">Select Subject</label>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <select name="subject_id" class="form-control" required style="flex: 1; height: 48px;">
                     <option value="">-- Select Subject --</option>
                     <?php foreach ($subjects as $sub): ?>
                         <option value="<?php echo $sub['id']; ?>" <?php echo ($subject_id == $sub['id']) ? 'selected' : ''; ?>><?php echo $sub['subject_code']; ?> - <?php echo $sub['name']; ?></option>
                     <?php endforeach; ?>
                 </select>
+                <button type="submit" class="btn btn-primary" style="height: 48px; padding: 0 2rem;">Load Marksheet</button>
             </div>
-            <button type="submit" class="btn btn-primary">Load Marksheet</button>
         </form>
     </div>
 
     <?php if (isset($success)): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
@@ -133,3 +133,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>

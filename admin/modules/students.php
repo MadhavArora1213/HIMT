@@ -43,24 +43,40 @@ $course_filter = $_GET['course_id'] ?? '';
 $sem_filter = $_GET['semester'] ?? '';
 $search = $_GET['search'] ?? '';
 
-// Build Query
+// Pagination settings
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$limit = 10;
+$offset = ($page - 1) * $limit;
+
+// Build Dynamic Query
+$where = ["1=1"];
+$params = [];
+
+if ($dept_filter) { $where[] = "s.department_id = ?"; $params[] = $dept_filter; }
+if ($course_filter) { $where[] = "s.course_id = ?"; $params[] = $course_filter; }
+if ($sem_filter) { $where[] = "s.current_semester = ?"; $params[] = $sem_filter; }
+if ($search) { 
+    $where[] = "(u.name LIKE ? OR s.enrollment_no LIKE ? OR s.roll_number LIKE ?)"; 
+    $params[] = "%$search%"; $params[] = "%$search%"; $params[] = "%$search%";
+}
+
+$where_sql = implode(" AND ", $where);
+
+// Count total for pagination
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM students s JOIN users u ON s.user_id = u.id WHERE $where_sql");
+$count_stmt->execute($params);
+$total_students = $count_stmt->fetchColumn();
+$total_pages = ceil($total_students / $limit);
+
+// Fetch filtered and paginated students
 $query = "SELECT s.*, u.name, u.email, d.name as dept_name, c.name as course_name 
           FROM students s
           JOIN users u ON s.user_id = u.id
           JOIN departments d ON s.department_id = d.id
           JOIN courses c ON s.course_id = c.id
-          WHERE 1=1";
-
-$params = [];
-if ($dept_filter) { $query .= " AND s.department_id = ?"; $params[] = $dept_filter; }
-if ($course_filter) { $query .= " AND s.course_id = ?"; $params[] = $course_filter; }
-if ($sem_filter) { $query .= " AND s.current_semester = ?"; $params[] = $sem_filter; }
-if ($search) { 
-    $query .= " AND (u.name LIKE ? OR s.enrollment_no LIKE ? OR s.roll_number LIKE ?)"; 
-    $params[] = "%$search%"; $params[] = "%$search%"; $params[] = "%$search%";
-}
-
-$query .= " ORDER BY s.id DESC";
+          WHERE $where_sql
+          ORDER BY s.id DESC
+          LIMIT $limit OFFSET $offset";
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $students = $stmt->fetchAll();
@@ -213,6 +229,20 @@ $courses = $pdo->query("SELECT id, name FROM courses WHERE is_active = 1")->fetc
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+        <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div style="font-size: 0.875rem; color: var(--text-muted);">
+                Showing page <strong><?php echo $page; ?></strong> of <strong><?php echo $total_pages; ?></strong> (Total <?php echo $total_students; ?> students)
+            </div>
+            <div class="pagination" style="display: flex; gap: 8px;">
+                <?php if ($page > 1): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" class="btn" style="padding: 0.4rem 0.8rem; background: white; border: 1px solid var(--border); font-size: 0.8125rem;"><i data-lucide="chevron-left" size="14"></i> Previous</a>
+                <?php endif; ?>
+                
+                <?php if ($page < $total_pages): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" class="btn" style="padding: 0.4rem 0.8rem; background: white; border: 1px solid var(--border); font-size: 0.8125rem;">Next <i data-lucide="chevron-right" size="14"></i></a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>

@@ -1,9 +1,12 @@
 <?php
-$page_title = 'Notice Board';
-include '../includes/header.php';
+require_once '../includes/config.php';
 
-$success = $_GET['success'] ?? '';
-$error = $_GET['error'] ?? '';
+// Handle Delete
+if (isset($_GET['delete_id'])) {
+    $pdo->prepare("DELETE FROM notices WHERE id = ?")->execute([$_GET['delete_id']]);
+    header("Location: notices.php?success=Notice removed successfully");
+    exit();
+}
 
 // Fetch all notices
 $query = "SELECT n.*, u.name as posted_by_name, d.name as dept_name, c.name as course_name 
@@ -13,6 +16,12 @@ $query = "SELECT n.*, u.name as posted_by_name, d.name as dept_name, c.name as c
           LEFT JOIN courses c ON n.course_id = c.id 
           ORDER BY n.is_pinned DESC, n.created_at DESC";
 $notices = $pdo->query($query)->fetchAll();
+
+$page_title = 'Notice Board';
+include '../includes/header.php';
+
+$success = $_GET['success'] ?? '';
+$error = $_GET['error'] ?? '';
 ?>
 
 <div style="padding: 2rem;">
@@ -27,8 +36,8 @@ $notices = $pdo->query($query)->fetchAll();
     </div>
 
     <?php if ($success): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
-            <?php echo $success; ?>
+        <div id="success-alert" style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <i data-lucide="check-circle" size="18" style="vertical-align: middle; margin-right: 8px;"></i> <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
 
@@ -68,8 +77,8 @@ $notices = $pdo->query($query)->fetchAll();
                     <i data-lucide="user" size="14"></i> <?php echo $n['posted_by_name']; ?>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <a href="notice_edit.php?id=<?php echo $n['id']; ?>" style="color: var(--accent);"><i data-lucide="edit-2" size="16"></i></a>
-                    <a href="#" style="color: var(--danger);"><i data-lucide="trash-2" size="16"></i></a>
+                    <a href="notice_edit.php?id=<?php echo $n['id']; ?>" class="btn-icon" title="Edit"><i data-lucide="edit-3" size="16"></i></a>
+                    <a href="?delete_id=<?php echo $n['id']; ?>" class="btn-icon" style="color: var(--danger);" onclick="return confirm('Delete this notice permanently?')" title="Delete"><i data-lucide="trash-2" size="16"></i></a>
                 </div>
             </div>
         </div>
@@ -78,3 +87,21 @@ $notices = $pdo->query($query)->fetchAll();
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function() {
+            const successAlert = document.getElementById('success-alert');
+            if (successAlert) {
+                successAlert.style.transition = 'opacity 0.5s';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }, 3000);
+    });
+</script>
